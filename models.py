@@ -310,7 +310,7 @@ class Party(db.Model):
         return len(self.members.all)
 
     @classmethod
-    async def create_party(cls, **kwargs) -> Party:
+    async def create_party(cls, **kwargs) -> 'Party':
         return await future_exec(cls.create, **kwargs)
 
 
