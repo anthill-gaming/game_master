@@ -89,28 +89,35 @@ class Room(InternalAPIMixin, db.Model):
         await RemoteUser.send_message_by_user_id(
             player.user_id, message=json.dumps(player_data2), content_type='application/json')
 
+    # noinspection PyMethodMayBeStatic
     async def leave(self, player):
-        pass
-
-    @classmethod
-    async def create(cls):
-        pass
+        await future_exec(player.delete)
 
     async def remove(self):
-        pass
+        await future_exec(Player.query.filter_by(room_id=self.id).delete)
+        await future_exec(self.delete)
+
+    @classmethod
+    async def create_room(cls, **kwargs):
+        return await future_exec(cls.create, **kwargs)
 
     async def terminate(self):
-        pass
+        # TODO: kill room process on controller
+        await self.remove()
 
     @classmethod
     async def find(cls, **kwargs):
-        pass
+        # TODO: setup room filter
+        rooms = await future_exec(cls.query.filter_by(**kwargs))
+        return rooms
 
     async def instantiate(self):
+        # TODO: start room process on controller
         pass
 
     async def spawn(self):
-        pass
+        result = await self.instantiate()
+        return result
 
 
 class Player(InternalAPIMixin, db.Model):
@@ -136,15 +143,15 @@ class Player(InternalAPIMixin, db.Model):
         if getattr(settings, 'GEOIP_PATH', None):
             return GeoIP2()
 
-    @property
-    def location(self):
+    def get_location(self):
         """Return a tuple of the (latitude, longitude) for the given ip address."""
         if self.ip_address is not None:
             return self.gis.lat_lon(self.ip_address)
 
     async def get_region(self):
-        if self.location:
-            loc = await GeoLocation.get_nearest(*self.location)
+        location = self.get_location()
+        if location:
+            loc = await GeoLocation.get_nearest(*location)
         else:
             loc = await GeoLocation.get_default()
         return loc.region
@@ -211,7 +218,7 @@ class Server(InternalAPIMixin, db.Model):
     last_failure_tb = db.Column(db.Text)
     enabled = db.Column(db.Boolean, nullable=False, default=True)
     rooms = db.relationship('Room', backref='server', lazy='dynamic')
-    system_load = db.Column(db.Float, nullable=False, default=0.0)
+    cpu_load = db.Column(db.Float, nullable=False, default=0.0)
     ram_usage = db.Column(db.Float, nullable=False, default=0.0)
 
     @hybrid_property
@@ -230,12 +237,12 @@ class Server(InternalAPIMixin, db.Model):
             self.last_failure_tb = traceback.format_tb(report.__traceback__)
         elif isinstance(report, HeartbeatReport):
             self.last_heartbeat = timezone.now()
-            self.system_load = report.system_load
+            self.cpu_load = report.cpu_load
             self.ram_usage = report.ram_usage
             self.status = 'overload' if report.server_is_overload() else 'active'
         else:
             raise ValueError('`report` argument should be either instance of'
-                             'HeartbeatReport or RequestError class')
+                             'HeartbeatReport or RequestError')
         self.save()
 
 
@@ -314,7 +321,7 @@ class Party(db.Model):
         return await future_exec(cls.create, **kwargs)
 
 
-def _check_permission(perm):
+def _check_permission(perm: 'PartySession.Permissions'):
     def decorator(f):
         @wraps(f)
         async def wrapper(session, *args, **kwargs):
@@ -345,7 +352,8 @@ class PartySession(InternalAPIMixin, db.Model):
     role = db.Column(db.Enum(Roles), default=Roles.USER)
     settings = db.Column(JSONType, nullable=False, default={})
     app_version_id = db.Column(db.Integer, db.ForeignKey('application_versions.id'))
-    app_version = db.relationship('ApplicationVersion', backref=db.backref('sessions', lazy='dynamic'))
+    app_version = db.relationship(
+        'ApplicationVersion', backref=db.backref('sessions', lazy='dynamic'))
 
     def has_permission(self, perm: Permissions) -> bool:
         return self.role.value >= perm.value
