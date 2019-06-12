@@ -21,6 +21,7 @@ BROKER = 'amqp://guest:guest@localhost:5672'
 
 # ROUTES_CONF = 'game_master.routes'
 
+MEDIA_ROOT = os.path.join(BASE_DIR, 'storage')
 TEMPLATE_PATH = os.path.join(BASE_DIR, 'ui', 'templates')
 LOCALE_PATH = os.path.join(BASE_DIR, 'locale')
 
