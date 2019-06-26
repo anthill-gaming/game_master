@@ -51,6 +51,7 @@ class ApplicationVersion(BaseApplicationVersion):
     __tablename__ = 'application_versions'
 
     rooms = db.relationship('Room', backref='app_version', lazy='dynamic')
+    deployments = db.relationship('Deployment', backref='app_version', lazy='dynamic')
 
 
 class Room(InternalAPIMixin, db.Model):
@@ -250,6 +251,8 @@ class Deployment(db.Model):
     __tablename__ = 'deployment'
 
     id = db.Column(db.Integer, primary_key=True)
+    app_version_id = db.Column(db.Integer, db.ForeignKey('application_versions.id'))
+    file = db.Column(db.FileType(upload_to='deployments'), nullable=False)
 
 
 class Party(db.Model):
