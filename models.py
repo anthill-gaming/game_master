@@ -240,7 +240,7 @@ class Server(InternalAPIMixin, db.Model):
             self.last_heartbeat = timezone.now()
             self.cpu_load = report.cpu_load
             self.ram_usage = report.ram_usage
-            self.status = 'overload' if report.server_is_overload() else 'active'
+            self.status = 'overload' if report.is_overload() else 'active'
         else:
             raise ValueError('`report` argument should be either instance of'
                              'HeartbeatReport or RequestError')
