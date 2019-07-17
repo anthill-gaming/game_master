@@ -1,10 +1,10 @@
 from anthill.framework.utils.asynchronous import as_future, thread_pool_exec as future_exec
-from anthill.framework.auth.handlers import UserHandlerMixin
 from anthill.platform.handlers.jsonrpc import JsonRPCSessionHandler, jsonrpc_method
+from anthill.platform.handlers import UserHandlerMixin
 from game_master.models import Party
 
 
-class BasePartySessionHandler(UserHandlerMixin, JsonRPCSessionHandler):
+class BasePartySessionHandler(JsonRPCSessionHandler, UserHandlerMixin):
     def __init__(self, application, request, **kwargs):
         super().__init__(self, application, request, **kwargs)
         self.session = None
